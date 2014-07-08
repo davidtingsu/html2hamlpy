@@ -42,9 +42,21 @@ def to_haml_navigable_string(self, tabs):
 def to_haml_comment(self, tabs):
     #TODO
     pass
-def to_haml_doctype(self, tabs):
-    #TODO
-    pass
+def to_haml_doctype(self, tabs, **kwargs):
+    attrs = ["", "", ""]
+    search = re.search(r'DTD\s+([^\s]+)\s*([^\s|^\/]*)\s*([^\s]*)\s*\/\/', self.string)
+    if search: attrs = search.groups()
+    kind, version, strictness = [ attr.lower() for attr in attrs ]
+    if kind == "html":
+        version = ""
+        if strictness == "": strictness = "strict"
+    if version == "1.0" or version is None:
+        version = ""
+    if strictness == 'transitional'  or strictness is None:
+        strictness = ""
+    if version: version = " %s" % version.capitalize()
+    if strictness: strictness = " %s" % strictness.capitalize()
+    return "%s!!!%s%s" % (tabulate(tabs), version, strictness)
 
 def is_static_id(**kwargs):
     instance = kwargs['instance']
