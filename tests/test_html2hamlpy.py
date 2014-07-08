@@ -29,5 +29,7 @@ class HtmlToHamlPyTest(unittest.TestCase):
         self.assertEqual('%div{id:"foo.bar"}', render("<div id='foo.bar'></div>"))
         self.assertEqual('%div{id:"foo#bar"}', render("<div id='foo#bar'></div>"))
 
+    def test_self_closing_tag(self):
+        self.assertEqual("%img/", render("<img />"))
 if __name__ == '__main__':
     unittest.main()

@@ -32,6 +32,7 @@ def to_haml_tag(self, tabs, **kwargs):
             del self.attrs['class']
             if any(leftover) : self.attrs['class'] = ' '.join(leftover)
     if len(self.attrs) > 0: output += haml_attributes(**kwargs)
+    if self.isSelfClosing : output += "/"
     return output + ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
 def to_haml_cdata(self, tabs):
     #TODO
