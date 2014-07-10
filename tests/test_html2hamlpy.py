@@ -31,5 +31,47 @@ class HtmlToHamlPyTest(unittest.TestCase):
 
     def test_self_closing_tag(self):
         self.assertEqual("%img/", render("<img />"))
+
+    def test_style_to_css_filter(self):
+        haml = """\
+:css
+  foo {
+    bar: baz;
+  }\
+"""
+        html = """\
+<style type="text/css">
+  foo {
+    bar: baz;
+  }
+</style>
+"""
+        self.assertEqual(haml, render(html))
+
+    def test_style_to_css_filter_with_no_content(self):
+        haml = """\
+:css
+"""
+        html = """\
+<style type="text/css"> </style>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+    def test_filter_with_inconsistent_indentation(self):
+        haml = """\
+:css
+  foo {
+      badly: indented;
+  }
+"""
+        html="""\
+<style type="text/css">
+  foo {
+    badly: indented;
+}
+</style>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
 if __name__ == '__main__':
     unittest.main()

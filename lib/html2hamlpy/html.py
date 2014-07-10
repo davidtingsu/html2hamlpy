@@ -8,6 +8,11 @@ def to_haml_tag(self, tabs, **kwargs):
     output = tabulate(tabs)
     kwargs['instance'] = self
 
+    if (self.name == "style" and
+        (self.attrs['type'] is None or self.attrs['type'] == "text/css") and
+        len(set(self.attrs.keys()) - set(['type'])) == 0):
+            return to_haml_filter('css', tabs, **kwargs)
+
     if (not
         ((self.name == 'div') and
         (
@@ -39,7 +44,7 @@ def to_haml_cdata(self, tabs):
     pass
 def to_haml_navigable_string(self, tabs):
     #TODO
-    pass
+    return self
 def to_haml_comment(self, tabs):
     #TODO
     pass
@@ -80,6 +85,26 @@ def is_static_classname(**kwargs):
 def is_dynamic_attribute(name, **kwargs):
     #TODO
     return False
+def to_haml_filter(filter, tabs, **kwargs):
+    instance = kwargs['instance']
+
+    content = instance.text
+    content = re.sub(r'\A\s*\n(\s*)','\g<1>', content)
+    original_indent = re.match(r'\A(\s*)', content).group()
+
+    if all( map(lambda line: len(line.strip()) == 0 or re.match('^'+original_indent, line), content.split('\n')) ):
+         content = re.sub('^'+original_indent, tabulate(tabs + 1), content)
+    else:
+        # Indentation is inconsistent. Strip whitespace from start and indent all
+        # to ensure valid Haml
+        # https://github.com/haml/html2haml/blob/c41cb712816d2ea4300e7c1730328a59a63b2ba7/lib/html2haml/html.rb#L453
+        content = content.lstrip()
+        content = re.sub(r'^', tabulate(tabs + 1), content, flags=re.MULTILINE)
+
+    content = content.rstrip()
+    content += "\n"
+
+    return "%s:%s\n%s" % (tabulate(tabs), filter, content)
 
 def haml_attributes(**kwargs):
     instance = kwargs['instance']
