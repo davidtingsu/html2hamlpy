@@ -43,13 +43,24 @@ def to_haml_tag(self, tabs, **kwargs):
             if any(leftover) : self.attrs['class'] = ' '.join(leftover)
     if len(self.attrs) > 0: output += haml_attributes(**kwargs)
     if self.isSelfClosing : output += "/"
+
+    if len(list(self.children)) == 1:
+        child = self.children.next()
+        if isinstance(child, NavigableString):
+          if not ("\n" in child):
+            text = child.to_haml(tabs + 1, **kwargs)
+            if not( not text or "\n" in chomp(text) ) : return output + " " + text.lstrip()
+            return output + "\n" + text
+
     return output + ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
+
+def chomp(text):
+    return re.sub(r'[\n|\r\n|\r]$', '', text, count=1)
 def to_haml_cdata(self, tabs):
     #TODO
     pass
-def to_haml_navigable_string(self, tabs):
-    #TODO
-    return self
+def to_haml_navigable_string(self, tabs, **kwargs):
+    return tabulate(tabs) + self
 def to_haml_comment(self, tabs):
     #TODO
     pass

@@ -32,6 +32,9 @@ class HtmlToHamlPyTest(unittest.TestCase):
     def test_self_closing_tag(self):
         self.assertEqual("%img/", render("<img />"))
 
+    def test_inline_text(self):
+        self.assertEqual("%p foo", render("<p>foo</p>"))
+
     def test_style_to_css_filter(self):
         haml = """\
 :css
