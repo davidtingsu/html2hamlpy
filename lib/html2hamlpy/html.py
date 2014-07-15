@@ -13,6 +13,11 @@ def to_haml_tag(self, tabs, **kwargs):
         len(set(self.attrs.keys()) - set(['type'])) == 0):
             return to_haml_filter('css', tabs, **kwargs)
 
+    if (self.name == "script" and
+        (self.attrs['type'] is None or self.attrs['type'] == "text/javascript") and
+        len(set(self.attrs.keys()) - set(['type'])) == 0):
+            return to_haml_filter('javascript', tabs, **kwargs)
+
     if (not
         ((self.name == 'div') and
         (

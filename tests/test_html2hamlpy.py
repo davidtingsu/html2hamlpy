@@ -73,5 +73,22 @@ class HtmlToHamlPyTest(unittest.TestCase):
 """
         self.assertEqual(haml.rstrip(), render(html))
 
+    def test_script_tag(self):
+        haml =  """\
+:javascript
+  function foo() {
+    return "12" & "13";
+  }
+"""
+        html = """\
+<script type="text/javascript">
+  function foo() {
+    return "12" & "13";
+  }
+</script>
+
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
 if __name__ == '__main__':
     unittest.main()
