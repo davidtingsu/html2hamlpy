@@ -52,7 +52,12 @@ def to_haml_tag(self, tabs, **kwargs):
             if not( not text or "\n" in chomp(text) ) : return output + " " + text.lstrip()
             return output + "\n" + text
 
-    return output + ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
+    return render_children( output + "\n", tabs, **kwargs)
+
+def render_children(so_far, tabs, **kwargs):
+    instance = kwargs['instance']
+    return so_far + ''.join(child.to_haml(tabs=tabs + 1) for child in (instance.children or []))
+
 
 def chomp(text):
     return re.sub(r'[\n|\r\n|\r]$', '', text, count=1)
@@ -60,6 +65,7 @@ def to_haml_cdata(self, tabs):
     #TODO
     pass
 def to_haml_navigable_string(self, tabs, **kwargs):
+    if self.strip() == "" : return  ""
     return tabulate(tabs) + self
 def to_haml_comment(self, tabs):
     #TODO

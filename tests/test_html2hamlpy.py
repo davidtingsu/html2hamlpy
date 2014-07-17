@@ -51,6 +51,27 @@ class HtmlToHamlPyTest(unittest.TestCase):
 """
         self.assertEqual(haml, render(html))
 
+    def test_style_to_css_filter_with_following_content(self):
+        haml="""\
+%head
+  :css
+    foo {
+      bar: baz;
+    }
+%body Hello
+"""
+        html = """\
+<head>
+  <style type="text/css">
+    foo {
+      bar: baz;
+    }
+  </style>
+</head>
+<body>Hello</body>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
     def test_style_to_css_filter_with_no_content(self):
         haml = """\
 :css
