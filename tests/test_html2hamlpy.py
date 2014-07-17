@@ -13,6 +13,9 @@ class HtmlToHamlPyTest(unittest.TestCase):
         self.assertEqual('!!! Frameset', render('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">'))
         self.assertEqual('!!!', render('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">'))
 
+    def test_id_and_class_should_be_removed_from_hash(self):
+        self.assertEqual('%span#foo.bar', render('<span id="foo" class="bar">  </span>'))
+
     def test_no_tag_name_for_div_if_class_or_id_is_present(self):
         self.assertEqual('#foo', render('<div id="foo"></div>'))
         self.assertEqual('.foo', render('<div class="foo"></div>'))
