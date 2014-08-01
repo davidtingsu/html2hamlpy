@@ -68,8 +68,15 @@ def to_haml_navigable_string(self, tabs, **kwargs):
     if self.strip() == "" : return  ""
     return tabulate(tabs) + self
 def to_haml_comment(self, tabs):
-    #TODO
-    pass
+    condition, content = '', self.string
+    match = re.search(r'\A(\[[^\]]+\])>(.*)<!\[endif\]\Z', content, re.MULTILINE | re.DOTALL)
+    if match :
+        condition = match.group(1)
+        content = match.group(2)
+    if '\n' in self.string:
+        return "%s/%s\n%s" % (tabulate(tabs), condition, parse_text(content.strip(), tabs+1))
+    else:
+        return "%s/%s %s\n" % (tabulate(tabs), condition, content.strip())
 def to_haml_doctype(self, tabs, **kwargs):
     attrs = ["", "", ""]
     search = re.search(r'DTD\s+([^\s]+)\s*([^\s|^\/]*)\s*([^\s]*)\s*\/\/', self.string)
@@ -138,6 +145,17 @@ def haml_attribute_pair(name, value, **kwargs):
 
 def tabulate(tabs):
     return '  ' * tabs
+
+def parse_text(text, tabs):
+    #TODO: handle dynamic content
+    text = text.strip()
+    if not text : return ""
+
+    lines = []
+    for line in text.split('\n'):
+        line = line.strip()
+        lines.append("%s%s\n" %(tabulate(tabs), line))
+    return ''.join(lines)
 
 setattr(BeautifulSoup, 'to_haml', to_haml_soup)
 setattr(Tag, 'to_haml', to_haml_tag)

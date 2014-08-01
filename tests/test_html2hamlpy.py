@@ -38,6 +38,44 @@ class HtmlToHamlPyTest(unittest.TestCase):
     def test_inline_text(self):
         self.assertEqual("%p foo", render("<p>foo</p>"))
 
+    def test_inline_comment(self):
+        self.assertEqual("/ foo", render("<!-- foo -->"))
+        haml = """\
+/ foo
+%p bar
+"""
+        html = """\
+<!-- foo -->
+<p>bar</p>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+    def test_non_inline_comment(self):
+        haml = """\
+/
+  Foo
+  Bar
+"""
+        html = """\
+<!-- Foo
+Bar -->
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+    def test_conditional_comment(self):
+        haml = """\
+/[if foo]
+  bar
+  baz
+"""
+        html = """\
+<!--[if foo]>
+  bar
+  baz
+<![endif]-->
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
     def test_style_to_css_filter(self):
         haml = """\
 :css
@@ -97,6 +135,14 @@ class HtmlToHamlPyTest(unittest.TestCase):
     badly: indented;
 }
 </style>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+    def test_inline_conditional_comment(self):
+        haml = """\
+/[if foo] bar baz
+"""
+        html="""\
+<!--[if foo]> bar baz <![endif]-->
 """
         self.assertEqual(haml.rstrip(), render(html))
 
