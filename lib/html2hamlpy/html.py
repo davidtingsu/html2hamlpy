@@ -1,6 +1,7 @@
 # Use list compomprehension for string concatenation http://www.skymind.com/~ocrow/python_string/
 from bs4 import Tag, CData, Comment, Tag, NavigableString, Doctype, BeautifulSoup
 import re
+import HTMLParser
 def to_haml_soup(self):
     return ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
 
@@ -63,7 +64,16 @@ def chomp(text):
     return re.sub(r'[\n|\r\n|\r]$', '', text, count=1)
 def to_haml_cdata(self, tabs):
     #TODO
-    pass
+    # handle dynamic content
+    # https://github.com/haml/html2haml/blob/01c0bd0a2ee059f6482ef7185860664b0724cf23/lib/html2haml/html.rb#L205
+    content = parse_text(self.string, tabs + 1)
+    return "%s:cdata\n%s" % (tabulate(tabs), content)
+
+def content_without_cdata_tokens(text):
+    content = re.sub(r'^\s*<!\[CDATA\[\n',"", text, flags = re.MULTILINE)
+    content = re.sub(r'^\s*\]\]>\n', "", content, flags = re.MULTILINE)
+    return content
+
 def to_haml_navigable_string(self, tabs, **kwargs):
     if self.strip() == "" : return  ""
     return tabulate(tabs) + self
@@ -118,11 +128,15 @@ def to_haml_filter(filter, tabs, **kwargs):
     instance = kwargs['instance']
 
     content = instance.text
+    if re.match(r'\s*<!\[CDATA\[(.*)\]\]>', instance.text, re.DOTALL | re.MULTILINE):
+        content = content_without_cdata_tokens(content)
+    else:
+        content = decode_entities(content)
     content = re.sub(r'\A\s*\n(\s*)','\g<1>', content)
     original_indent = re.match(r'\A(\s*)', content).group()
 
     if all( map(lambda line: len(line.strip()) == 0 or re.match('^'+original_indent, line), content.split('\n')) ):
-         content = re.sub('^'+original_indent, tabulate(tabs + 1), content)
+         content = re.sub('^'+original_indent, tabulate(tabs + 1), content, flags = re.MULTILINE)
     else:
         # Indentation is inconsistent. Strip whitespace from start and indent all
         # to ensure valid Haml
@@ -156,6 +170,10 @@ def parse_text(text, tabs):
         line = line.strip()
         lines.append("%s%s\n" %(tabulate(tabs), line))
     return ''.join(lines)
+
+def decode_entities(text):
+    # http://stackoverflow.com/a/2087433/1123985
+    return HTMLParser.HTMLParser().unescape(text)
 
 setattr(BeautifulSoup, 'to_haml', to_haml_soup)
 setattr(Tag, 'to_haml', to_haml_tag)

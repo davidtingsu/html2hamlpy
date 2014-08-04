@@ -32,6 +32,23 @@ class HtmlToHamlPyTest(unittest.TestCase):
         self.assertEqual('%div{id:"foo.bar"}', render("<div id='foo.bar'></div>"))
         self.assertEqual('%div{id:"foo#bar"}', render("<div id='foo#bar'></div>"))
 
+    def  test_cdata(self):
+        haml="""\
+%p
+  :cdata
+    <a foo="bar" baz="bang">
+    <div id="foo">flop</div>
+    </a>
+"""
+        html="""\
+<p><![CDATA[
+  <a foo="bar" baz="bang">
+    <div id="foo">flop</div>
+  </a>
+]]></p>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
     def test_self_closing_tag(self):
         self.assertEqual("%img/", render("<img />"))
 
@@ -160,6 +177,41 @@ Bar -->
   }
 </script>
 
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+    def test_script_tag_with_html_escaped_javascript(self):
+        haml = """\
+:javascript
+  function foo() {
+    return "12" & "13";
+  }
+"""
+        html = """\
+<script type="text/javascript">
+  function foo() {
+    return "12" &amp; "13";
+  }
+</script>
+"""
+
+        self.assertEqual(haml.rstrip(), render(html))
+
+    def test_script_tag_with_cdata(self):
+        haml = """\
+:javascript
+  function foo(){
+    return "&amp;";
+  }
+"""
+        html = """\
+<script type="text/javascript">
+  <![CDATA[
+    function foo(){
+      return "&amp;";
+    }
+  ]]>
+</script>
 """
         self.assertEqual(haml.rstrip(), render(html))
 
