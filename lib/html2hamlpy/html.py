@@ -76,7 +76,7 @@ def content_without_cdata_tokens(text):
 
 def to_haml_navigable_string(self, tabs, **kwargs):
     if self.strip() == "" : return  ""
-    return tabulate(tabs) + self
+    return parse_text(self, tabs)
 def to_haml_comment(self, tabs):
     condition, content = '', self.string
     match = re.search(r'\A(\[[^\]]+\])>(.*)<!\[endif\]\Z', content, re.MULTILINE | re.DOTALL)

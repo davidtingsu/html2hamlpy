@@ -1,6 +1,9 @@
 from  test_helper import unittest, render
 
 class HtmlToHamlPyTest(unittest.TestCase):
+    def test_empty_render_should_remain_empty(self):
+        self.assertEqual('', render(''))
+
     def test_doctype(self):
         self.assertEqual('!!!', render("<!DOCTYPE html>"))
         self.assertEqual('!!! 1.1', render('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">'))
@@ -76,6 +79,37 @@ class HtmlToHamlPyTest(unittest.TestCase):
         html = """\
 <!-- Foo
 Bar -->
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+    def test_non_inline_text(self):
+        haml = """\
+%p
+  foo
+"""
+        html = """\
+<p>
+  foo
+</p>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+        haml = """\
+%p
+  foo
+"""
+        html = """\
+<p>
+  foo</p>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+        haml = """\
+%p
+  foo
+"""
+        html = """\
+<p>foo
+</p>
 """
         self.assertEqual(haml.rstrip(), render(html))
 
