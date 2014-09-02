@@ -2,6 +2,7 @@
 from bs4 import Tag, CData, Comment, Tag, NavigableString, Doctype, BeautifulSoup
 import re
 import HTMLParser
+CLOSED_TAG_REGEX = re.compile(r'\s*{%\s*(?P<tag>[^\s]+).*\s+%}\n{0,1}(?P<content>.*?){%.*?(?P=tag).*?%}\n*', re.M|re.DOTALL)
 def to_haml_soup(self):
     return ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
 
@@ -164,12 +165,19 @@ def parse_text(text, tabs):
     #TODO: handle dynamic content
     text = text.strip()
     if not text : return ""
-
     lines = []
+    match = CLOSED_TAG_REGEX.match(text)
+    if match : tabs += 1
     for line in text.split('\n'):
         line = line.strip()
         lines.append("%s%s\n" %(tabulate(tabs), line))
-    return ''.join(lines)
+    text = ''.join(lines)
+    match = CLOSED_TAG_REGEX.match(text)
+    if match :
+        tag = match.group('tag')
+        content = match.group('content')
+        text = "- %s\n%s\n" %(tag, content)
+    return text
 
 def decode_entities(text):
     # http://stackoverflow.com/a/2087433/1123985
