@@ -3,6 +3,7 @@ from bs4 import Tag, CData, Comment, Tag, NavigableString, Doctype, BeautifulSou
 import re
 import HTMLParser
 CLOSED_TAG_REGEX = re.compile(r'\s*{%\s*(?P<tag>[^\s]+).*\s+%}\n{0,1}(?P<content>.*?){%.*?(?P=tag).*?%}\n*', re.M|re.DOTALL)
+VARIABLE_REGEX = re.compile(r'\s*{{\s*(?P<content>[^\{\}]+\s*)}}\s*', re.M|re.DOTALL)
 def to_haml_soup(self):
     return ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
 
@@ -161,6 +162,8 @@ def haml_attribute_pair(name, value, **kwargs):
 def tabulate(tabs):
     return '  ' * tabs
 
+def variable_object_to_haml(matchobj):
+    return "= %s" % matchobj.group('content')
 def parse_text(text, tabs):
     #TODO: handle dynamic content
     text = text.strip()
@@ -169,6 +172,9 @@ def parse_text(text, tabs):
     match = CLOSED_TAG_REGEX.match(text)
     if match : tabs += 1
     for line in text.split('\n'):
+        variable_match = VARIABLE_REGEX.match(line)
+        if variable_match:
+            line = re.sub(VARIABLE_REGEX, variable_object_to_haml, line)
         line = line.strip()
         lines.append("%s%s\n" %(tabulate(tabs), line))
     text = ''.join(lines)
