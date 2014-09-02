@@ -28,5 +28,14 @@ class DjangoTest(unittest.TestCase):
     = story.teaser
 """
         self.assertEqual(haml.rstrip(), render(html))
+
+    def test_attribute_variables(self):
+      haml="""\
+%a{title:"Hello ={name}, how are you?"} Hello
+"""
+      html = """\
+<a title='Hello {{ name }}, how are you?'>Hello</a>
+"""
+      self.assertEqual(haml.rstrip(), render(html))
 if __name__ == '__main__':
     unittest.main()
