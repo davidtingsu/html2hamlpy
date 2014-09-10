@@ -2,16 +2,38 @@
 from bs4 import Tag, CData, Comment, Tag, NavigableString, Doctype, BeautifulSoup
 import re
 import HTMLParser
-CLOSED_TAG_REGEX = re.compile(r'\s*{%\s*(?P<tag>[^\s]+).*\s+%}\n{0,1}(?P<content>.*?){%.*?(?P=tag).*?%}\n*', re.DOTALL)
+
+CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<opentagcontent>(?P<tag>[^\s%}]+)[^%}]*)\s+%}\n{0,1}(?P<content>.*?){%[^%}]*?end(?P=tag).*?%}(?P<rightspace>\n*)', re.DOTALL)
 VARIABLE_REGEX = re.compile(r'(?P<leftspace>\s*){{\s*(?P<content>[^\{\}]+?)\s*}}(?P<rightspace>\s*)', re.DOTALL)
-SELF_CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<content>(?P<tag>[^\s]+)[^%}]*)\s+%}\n{0,1}(?![^%}]*{%.*?(?P=tag).*?%}\n*)', re.DOTALL)
+SELF_CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<content>(?P<tag>[^\s]+)[^%}]*)\s+%}\n{0,1}(?![^%}]*{%.*?end(?P=tag).*?%}\n*)', re.DOTALL)
+
+def closed_tag_to_dynamic(matchobj):
+    leftspace = matchobj.group('leftspace')
+    content = matchobj.group('content')
+    rightspace = matchobj.group('rightspace')
+    opentagcontent = matchobj.group('opentagcontent')
+    return "%s<dynamic dynamic=\"%s\">%s</dynamic>%s" % (leftspace, opentagcontent, content, rightspace)
+
+def self_closed_tag_to_dynamic(matchobj):
+    leftspace = matchobj.group('leftspace')
+    content = matchobj.group('content')
+
+    return "%s<dynamic dynamic=\"%s\"/>" % (leftspace, content)
+
+class Converter:
+    def __init__(self, *args, **kwargs):
+
+        text = args[0]
+        while(len(CLOSED_TAG_REGEX.findall(text)) > 0):
+            text = re.sub(CLOSED_TAG_REGEX, closed_tag_to_dynamic, text)
+        text = re.sub(SELF_CLOSED_TAG_REGEX, self_closed_tag_to_dynamic, text)
+
+        self.soup = BeautifulSoup(text, *args[1:], **kwargs)
+
+    def to_haml(self):
+        return self.soup.to_haml()
+
 def to_haml_soup(self):
-
-    map(
-        lambda t: t.replace_with('- %s' % SELF_CLOSED_TAG_REGEX.match(t).group('content')),
-        filter(lambda t: SELF_CLOSED_TAG_REGEX.match(t), self.find_all(text=SELF_CLOSED_TAG_REGEX))
-    )
-
     return ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
 
 def to_haml_tag(self, tabs, **kwargs):
@@ -27,8 +49,9 @@ def to_haml_tag(self, tabs, **kwargs):
         (self.attrs['type'] is None or self.attrs['type'] == "text/javascript") and
         len(set(self.attrs.keys()) - set(['type'])) == 0):
             return to_haml_filter('javascript', tabs, **kwargs)
-
-    if (not
+    if (self.name == "dynamic"):
+        output += ("- %s") % self.attrs['dynamic']
+    elif (not
         ((self.name == 'div') and
         (
             ('id' in self.attrs and is_static_id(**kwargs)) or
@@ -119,10 +142,6 @@ def is_static_id(**kwargs):
 def is_haml_css_attr(attr):
     return bool(re.match(r'^[-:\w]+$', attr))
 
-def is_dynamic_attribute(name, **kwargs):
-    #TODO
-    return False
-
 def is_static_attribute(name, **kwargs):
     instance = kwargs['instance']
     return name in instance.attrs and not is_dynamic_attribute(name, **kwargs)
@@ -131,8 +150,9 @@ def is_static_classname(**kwargs):
     return is_static_attribute('class', **kwargs)
 
 def is_dynamic_attribute(name, **kwargs):
-    #TODO
-    return False
+    instance = kwargs['instance']
+    return instance.is_dynamic
+
 def to_haml_filter(filter, tabs, **kwargs):
     instance = kwargs['instance']
 
@@ -160,6 +180,7 @@ def to_haml_filter(filter, tabs, **kwargs):
 
 def haml_attributes(**kwargs):
     instance = kwargs['instance']
+    if instance.is_dynamic: return ''
     attrs = map(lambda (name, value): haml_attribute_pair(name, value), instance.attrs.items())
     return "{%s}" % ', '.join(attrs)
 
@@ -179,7 +200,6 @@ def variable_object_to_haml(matchobj, inline=False):
 def variable_object_to_haml_generator(inline=False):
     return lambda matchobj, inline=inline: variable_object_to_haml(matchobj, inline)
 def parse_text(text, tabs):
-    #TODO: handle dynamic content
     text = text.strip()
     if not text : return ""
     lines = []
@@ -195,6 +215,7 @@ def parse_text(text, tabs):
         line = line.strip()
         lines.append("%s%s\n" %(tabulate(tabs), line))
     text = ''.join(lines)
+
     match = CLOSED_TAG_REGEX.match(text)
     if match :
         tag = match.group('tag')
@@ -206,8 +227,13 @@ def decode_entities(text):
     # http://stackoverflow.com/a/2087433/1123985
     return HTMLParser.HTMLParser().unescape(text)
 
+@property
+def is_dynamic(self):
+    return self.name == "dynamic"
+
 setattr(BeautifulSoup, 'to_haml', to_haml_soup)
 setattr(Tag, 'to_haml', to_haml_tag)
+setattr(Tag, 'is_dynamic', is_dynamic)
 setattr(CData, 'to_haml', to_haml_cdata)
 setattr(Comment, 'to_haml', to_haml_comment)
 setattr(NavigableString, 'to_haml', to_haml_navigable_string)

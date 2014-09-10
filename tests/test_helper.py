@@ -6,4 +6,4 @@ import bs4
 import unittest
 from lib.html2hamlpy import html
 def render(string):
-  return bs4.BeautifulSoup(string, 'html.parser').to_haml().rstrip()
+  return html.Converter(string, 'html.parser').to_haml().rstrip()
