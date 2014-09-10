@@ -4,7 +4,14 @@ import re
 import HTMLParser
 CLOSED_TAG_REGEX = re.compile(r'\s*{%\s*(?P<tag>[^\s]+).*\s+%}\n{0,1}(?P<content>.*?){%.*?(?P=tag).*?%}\n*', re.DOTALL)
 VARIABLE_REGEX = re.compile(r'(?P<leftspace>\s*){{\s*(?P<content>[^\{\}]+?)\s*}}(?P<rightspace>\s*)', re.DOTALL)
+SELF_CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<content>(?P<tag>[^\s]+)[^%}]*)\s+%}\n{0,1}(?![^%}]*{%.*?(?P=tag).*?%}\n*)', re.DOTALL)
 def to_haml_soup(self):
+
+    map(
+        lambda t: t.replace_with('- %s' % SELF_CLOSED_TAG_REGEX.match(t).group('content')),
+        filter(lambda t: SELF_CLOSED_TAG_REGEX.match(t), self.find_all(text=SELF_CLOSED_TAG_REGEX))
+    )
+
     return ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
 
 def to_haml_tag(self, tabs, **kwargs):

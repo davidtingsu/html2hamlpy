@@ -37,5 +37,15 @@ class DjangoTest(unittest.TestCase):
 <a title='Hello {{ name }}, how are you?'>Hello</a>
 """
       self.assertEqual(haml.rstrip(), render(html))
+
+    def test_self_closing_tag(self):
+        haml = """\
+- cycle 'row1' 'row2' as rowcolors
+"""
+        html = """\
+{% cycle 'row1' 'row2' as rowcolors %}
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
 if __name__ == '__main__':
     unittest.main()
