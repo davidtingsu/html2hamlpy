@@ -1,4 +1,4 @@
-from  test_helper import unittest, render
+from  .test_helper import unittest, render
 
 class HtmlToHamlPyTest(unittest.TestCase):
     def test_empty_render_should_remain_empty(self):

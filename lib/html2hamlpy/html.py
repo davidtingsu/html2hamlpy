@@ -2,7 +2,11 @@
 from bs4 import Tag, CData, Comment, Tag, NavigableString, Doctype, BeautifulSoup
 import re
 import cgi
-import HTMLParser
+try:
+    from HTMLParser import HTMLParser
+except ImportError:
+    from html.parser import HTMLParser
+
 
 CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<opentagcontent>(?P<tag>[^\s%}]+)[^%}]*)\s+%}\n{0,1}(?P<content>.*?){%[^%}]*?end(?P=tag).*?%}(?P<rightspace>\n*)', re.DOTALL)
 VARIABLE_REGEX = re.compile(r'(?P<leftspace>\s*){{\s*(?P<content>[^\{\}]+?)\s*}}(?P<rightspace>\s*)', re.DOTALL)
@@ -72,14 +76,14 @@ def to_haml_tag(self, tabs, **kwargs):
         if 'class' in self.attrs:
             for c in filter(lambda c: is_haml_css_attr(c), self.attrs['class']):
                 output += ".%s" % (c)
-            leftover = filter(lambda c: not is_haml_css_attr(c), self.attrs['class'])
+            leftover = [ s for s in filter(lambda c: not is_haml_css_attr(c), self.attrs['class']) ]
             del self.attrs['class']
             if any(leftover) : self.attrs['class'] = ' '.join(leftover)
     if len(self.attrs) > 0: output += haml_attributes(**kwargs)
     if self.isSelfClosing : output += "/"
 
     if len(list(self.children)) == 1:
-        child = self.children.next()
+        child = next(self.children)
         if isinstance(child, NavigableString):
           if not ("\n" in child):
             text = child.to_haml(tabs + 1, **kwargs)
@@ -130,8 +134,10 @@ def to_haml_cdata(self, tabs):
     return "%s:cdata\n%s" % (tabulate(tabs), content)
 
 def content_without_cdata_tokens(text):
-    content = re.sub(r'^\s*<!\[CDATA\[\n',"", text, flags = re.MULTILINE)
-    content = re.sub(r'^\s*\]\]>\n', "", content, flags = re.MULTILINE)
+    CDATA_OPEN_TAG_REGEX = re.compile(r'^\s*<!\[CDATA\[\n', flags = re.MULTILINE)
+    CDATA_CLOSE_TAG_REGEX = re.compile(r'^\s*\]\]>\n', flags = re.MULTILINE)
+    content = CDATA_OPEN_TAG_REGEX.sub("", text)
+    content =  CDATA_CLOSE_TAG_REGEX.sub("", content)
     return content
 
 def to_haml_navigable_string(self, tabs, **kwargs):
@@ -198,13 +204,15 @@ def to_haml_filter(filter, tabs, **kwargs):
     original_indent = re.match(r'\A(\s*)', content).group()
 
     if all( map(lambda line: len(line.strip()) == 0 or re.match('^'+original_indent, line), content.split('\n')) ):
-         content = re.sub('^'+original_indent, tabulate(tabs + 1), content, flags = re.MULTILINE)
+         ORIGINAL_INDENT_REGEX = re.compile('^'+original_indent, flags = re.MULTILINE)
+         content = ORIGINAL_INDENT_REGEX.sub(tabulate(tabs + 1), content)
     else:
         # Indentation is inconsistent. Strip whitespace from start and indent all
         # to ensure valid Haml
         # https://github.com/haml/html2haml/blob/c41cb712816d2ea4300e7c1730328a59a63b2ba7/lib/html2haml/html.rb#L453
+        EMPTY_INDENT_REGEX = re.compile(r'^', flags=re.MULTILINE)
         content = content.lstrip()
-        content = re.sub(r'^', tabulate(tabs + 1), content, flags=re.MULTILINE)
+        content = EMPTY_INDENT_REGEX.sub(tabulate(tabs + 1), content)
     content = translate_text_to_variable_haml(content)
     content = content.rstrip()
     content += "\n"
@@ -214,7 +222,7 @@ def to_haml_filter(filter, tabs, **kwargs):
 def haml_attributes(**kwargs):
     instance = kwargs['instance']
     if instance.is_dynamic: return ''
-    attrs = map(lambda (name, value): haml_attribute_pair(name, value), instance.attrs.items())
+    attrs = map(lambda kv_pair : haml_attribute_pair(kv_pair[0], kv_pair[1]), instance.attrs.items())
     return "{%s}" % ', '.join(attrs)
 
 def haml_attribute_pair(name, value, **kwargs):
@@ -263,7 +271,7 @@ def parse_text(text, tabs, **kwargs):
 
 def decode_entities(text):
     # http://stackoverflow.com/a/2087433/1123985
-    return HTMLParser.HTMLParser().unescape(text)
+    return HTMLParser().unescape(text)
 
 @property
 def is_dynamic(self):
