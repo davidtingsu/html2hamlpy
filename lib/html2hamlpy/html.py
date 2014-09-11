@@ -172,7 +172,7 @@ def to_haml_filter(filter, tabs, **kwargs):
         # https://github.com/haml/html2haml/blob/c41cb712816d2ea4300e7c1730328a59a63b2ba7/lib/html2haml/html.rb#L453
         content = content.lstrip()
         content = re.sub(r'^', tabulate(tabs + 1), content, flags=re.MULTILINE)
-
+    content = translate_text_to_variable_haml(content)
     content = content.rstrip()
     content += "\n"
 
@@ -190,29 +190,34 @@ def haml_attribute_pair(name, value, **kwargs):
 def tabulate(tabs):
     return '  ' * tabs
 
-def variable_object_to_haml(matchobj, inline=False):
+def variable_object_to_haml(matchobj, inline=False, **kwargs):
+    rightspace = matchobj.group('rightspace')
+    leftspace = matchobj.group('leftspace')
     if inline:
-        rightspace = matchobj.group('rightspace')
-        leftspace = matchobj.group('leftspace')
         return "%s={%s}%s" % (leftspace, matchobj.group('content'), rightspace)
     else:
-        return "= %s" % matchobj.group('content')
-def variable_object_to_haml_generator(inline=False):
-    return lambda matchobj, inline=inline: variable_object_to_haml(matchobj, inline)
-def parse_text(text, tabs):
+        return "%s= %s%s" % (leftspace, matchobj.group('content'), rightspace)
+def variable_object_to_haml_generator(inline=False, **kwargs):
+    return lambda matchobj, inline=inline: variable_object_to_haml(matchobj, inline, **kwargs)
+
+def translate_text_to_variable_haml(text, **kwargs):
+    instance = kwargs.pop('instance', None)
+    inline_variable = len(VARIABLE_REGEX.findall(text)) > 0
+    variable_match = VARIABLE_REGEX.match(text)
+    if variable_match:
+        text = re.sub(VARIABLE_REGEX, variable_object_to_haml_generator(), text)
+    elif inline_variable:
+        text = re.sub(VARIABLE_REGEX, variable_object_to_haml_generator(inline=True), text)
+    return text
+
+def parse_text(text, tabs, **kwargs):
     text = text.strip()
     if not text : return ""
     lines = []
     match = CLOSED_TAG_REGEX.match(text)
     if match : tabs += 1
     for line in text.split('\n'):
-        inline_variable = len(VARIABLE_REGEX.findall(line)) > 0
-        variable_match = VARIABLE_REGEX.match(line)
-        if variable_match:
-            line = re.sub(VARIABLE_REGEX, variable_object_to_haml_generator(), line)
-        elif inline_variable:
-            line = re.sub(VARIABLE_REGEX, variable_object_to_haml_generator(inline=True), line)
-        line = line.strip()
+        line = translate_text_to_variable_haml(line).strip()
         lines.append("%s%s\n" %(tabulate(tabs), line))
     text = ''.join(lines)
 

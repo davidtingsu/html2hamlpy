@@ -1,6 +1,80 @@
 from  test_helper import unittest, render
 import re
 class DjangoTest(unittest.TestCase):
+    def test_django_variable_in_cdata(self):
+        haml = """\
+:cdata
+  Foo ={bar} baz
+"""
+        html = """\
+<![CDATA[Foo {{bar}} baz]]>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+        haml = """\
+:cdata
+  = bar
+"""
+        html = """\
+<![CDATA[ {{bar}} ]]>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+
+    def test_django_inline_variable_in_script(self):
+      haml = """\
+:javascript
+  function foo() {
+    return  ={story.teaser};
+  }
+"""
+      html = """\
+<script type="text/javascript">
+  function foo() {
+    return  {{ story.teaser }};
+  }
+</script>
+"""
+      self.assertEqual(haml.rstrip(), render(html))
+
+    def test_django_variable_in_script(self):
+      haml = """\
+:javascript
+  = story.teaser
+"""
+      html = """\
+<script type="text/javascript">
+    {{ story.teaser }}
+</script>
+"""
+      self.assertEqual(haml.rstrip(), render(html))
+    def test_erb_in_style(self):
+      haml = """\
+:css
+  foo {
+      bar: ={baz};
+  }
+"""
+      html = """\
+<style type="text/css">
+    foo {
+        bar: {{ baz }};
+    }
+</style>
+"""
+      self.assertEqual(haml.rstrip(), render(html))
+
+      haml = """\
+:css
+  = baz;
+"""
+      html = """\
+<style type="text/css">
+        {{ baz }};
+</style>
+"""
+      self.assertEqual(haml.rstrip(), render(html))
+
     def test_closed_tags(self):
         html = """\
 {% autoescape on %}
