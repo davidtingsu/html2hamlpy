@@ -1,7 +1,11 @@
 # Use list compomprehension for string concatenation http://www.skymind.com/~ocrow/python_string/
 from bs4 import Tag, CData, Comment, Tag, NavigableString, Doctype, BeautifulSoup
 import re
-import HTMLParser
+try:
+    from HTMLParser import HTMLParser
+except ImportError:
+    from html.parser import HTMLParser
+
 def to_haml_soup(self):
     return ''.join(child.to_haml(tabs=0) for child in (self.children or []) )
 
@@ -39,14 +43,14 @@ def to_haml_tag(self, tabs, **kwargs):
         if 'class' in self.attrs:
             for c in filter(lambda c: is_haml_css_attr(c), self.attrs['class']):
                 output += ".%s" % (c)
-            leftover = filter(lambda c: not is_haml_css_attr(c), self.attrs['class'])
+            leftover = [ s for s in filter(lambda c: not is_haml_css_attr(c), self.attrs['class']) ]
             del self.attrs['class']
             if any(leftover) : self.attrs['class'] = ' '.join(leftover)
     if len(self.attrs) > 0: output += haml_attributes(**kwargs)
     if self.isSelfClosing : output += "/"
 
     if len(list(self.children)) == 1:
-        child = self.children.next()
+        child = next(self.children)
         if isinstance(child, NavigableString):
           if not ("\n" in child):
             text = child.to_haml(tabs + 1, **kwargs)
@@ -155,7 +159,7 @@ def to_haml_filter(filter, tabs, **kwargs):
 
 def haml_attributes(**kwargs):
     instance = kwargs['instance']
-    attrs = map(lambda (name, value): haml_attribute_pair(name, value), instance.attrs.items())
+    attrs = map(lambda kv_pair : haml_attribute_pair(kv_pair[0], kv_pair[1]), instance.attrs.items())
     return "{%s}" % ', '.join(attrs)
 
 def haml_attribute_pair(name, value, **kwargs):
@@ -177,7 +181,7 @@ def parse_text(text, tabs):
 
 def decode_entities(text):
     # http://stackoverflow.com/a/2087433/1123985
-    return HTMLParser.HTMLParser().unescape(text)
+    return HTMLParser().unescape(text)
 
 setattr(BeautifulSoup, 'to_haml', to_haml_soup)
 setattr(Tag, 'to_haml', to_haml_tag)
