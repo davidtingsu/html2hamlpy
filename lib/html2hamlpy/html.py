@@ -101,8 +101,8 @@ def chomp(text):
     return re.sub(r'[\n|\r\n|\r]$', '', text, count=1)
 
 def escape_html_except_for_dynamic(soup):
-    if not soup.body: return
-    for c in soup.body.children:
+    if not soup: return
+    for c in soup.contents:
         children = []
         children.append(c)
         while(len(children) > 0 and c != None):
@@ -116,10 +116,10 @@ def escape_html_except_for_dynamic(soup):
 
 
 def convert_dynamic_to_haml(soup, tabs=0):
-    if not soup.body: return ''
+    if not soup: return ''
     escape_html_except_for_dynamic(soup)
     for c in soup.find_all("dynamic"): c.replace_with(c.to_haml(tabs=tabs))
-    return decode_entities(''.join(soup.body.contents))
+    return decode_entities(''.join(soup.contents))
 
 
 def to_haml_cdata(self, tabs):
@@ -130,6 +130,8 @@ def to_haml_cdata(self, tabs):
 
     if BeautifulSoup(content).find_all("dynamic"):
         content = convert_dynamic_to_haml(BeautifulSoup(content), tabs=tabs+1)
+        content = content.lstrip()
+        content = "%s%s" % (tabulate(tabs+1), content)
 
     return "%s:cdata\n%s" % (tabulate(tabs), content)
 
@@ -198,7 +200,7 @@ def to_haml_filter(filter, tabs, **kwargs):
 
     soup = BeautifulSoup(content)
     if soup.body and soup.body.p : soup.body.p.replace_with(content)
-    content = convert_dynamic_to_haml(soup, tabs=tabs+1)
+    if soup.find_all('dynamic'): content = convert_dynamic_to_haml(soup, tabs=tabs+1)
 
     content = re.sub(r'\A\s*\n(\s*)','\g<1>', content)
     original_indent = re.match(r'\A(\s*)', content).group()

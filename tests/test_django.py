@@ -1,4 +1,4 @@
-from  test_helper import unittest, render
+from  .test_helper import unittest, render
 import re
 class DjangoTest(unittest.TestCase):
     def test_django_variable_in_cdata(self):
