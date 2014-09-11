@@ -70,8 +70,10 @@ def to_haml_cdata(self, tabs):
     return "%s:cdata\n%s" % (tabulate(tabs), content)
 
 def content_without_cdata_tokens(text):
-    content = re.sub(r'^\s*<!\[CDATA\[\n',"", text, flags = re.MULTILINE)
-    content = re.sub(r'^\s*\]\]>\n', "", content, flags = re.MULTILINE)
+    CDATA_OPEN_TAG_REGEX = re.compile(r'^\s*<!\[CDATA\[\n', flags = re.MULTILINE)
+    CDATA_CLOSE_TAG_REGEX = re.compile(r'^\s*\]\]>\n', flags = re.MULTILINE)
+    content = CDATA_OPEN_TAG_REGEX.sub("", text)
+    content =  CDATA_CLOSE_TAG_REGEX.sub("", content)
     return content
 
 def to_haml_navigable_string(self, tabs, **kwargs):
@@ -136,13 +138,15 @@ def to_haml_filter(filter, tabs, **kwargs):
     original_indent = re.match(r'\A(\s*)', content).group()
 
     if all( map(lambda line: len(line.strip()) == 0 or re.match('^'+original_indent, line), content.split('\n')) ):
-         content = re.sub('^'+original_indent, tabulate(tabs + 1), content, flags = re.MULTILINE)
+         ORIGINAL_INDENT_REGEX = re.compile('^'+original_indent, flags = re.MULTILINE)
+         content = ORIGINAL_INDENT_REGEX.sub(tabulate(tabs + 1), content)
     else:
         # Indentation is inconsistent. Strip whitespace from start and indent all
         # to ensure valid Haml
         # https://github.com/haml/html2haml/blob/c41cb712816d2ea4300e7c1730328a59a63b2ba7/lib/html2haml/html.rb#L453
+        EMPTY_INDENT_REGEX = re.compile(r'^', flags=re.MULTILINE)
         content = content.lstrip()
-        content = re.sub(r'^', tabulate(tabs + 1), content, flags=re.MULTILINE)
+        content = EMPTY_INDENT_REGEX.sub(tabulate(tabs + 1), content)
 
     content = content.rstrip()
     content += "\n"
