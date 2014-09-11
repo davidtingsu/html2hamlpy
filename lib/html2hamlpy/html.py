@@ -1,6 +1,7 @@
 # Use list compomprehension for string concatenation http://www.skymind.com/~ocrow/python_string/
 from bs4 import Tag, CData, Comment, Tag, NavigableString, Doctype, BeautifulSoup
 import re
+import cgi
 import HTMLParser
 
 CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<opentagcontent>(?P<tag>[^\s%}]+)[^%}]*)\s+%}\n{0,1}(?P<content>.*?){%[^%}]*?end(?P=tag).*?%}(?P<rightspace>\n*)', re.DOTALL)
@@ -94,11 +95,38 @@ def render_children(so_far, tabs, **kwargs):
 
 def chomp(text):
     return re.sub(r'[\n|\r\n|\r]$', '', text, count=1)
+
+def escape_html_except_for_dynamic(soup):
+    if not soup.body: return
+    for c in soup.body.children:
+        children = []
+        children.append(c)
+        while(len(children) > 0 and c != None):
+            c = children.pop(0)
+            if isinstance(c, Tag):
+                if not c.is_dynamic:
+                    c.replace_with("\n"+cgi.escape(str(c)))
+                [children.append(c) for c in c.children]
+            else:
+                c.replace_with("\n"+cgi.escape(str(c)))
+
+
+def convert_dynamic_to_haml(soup, tabs=0):
+    if not soup.body: return ''
+    escape_html_except_for_dynamic(soup)
+    for c in soup.find_all("dynamic"): c.replace_with(c.to_haml(tabs=tabs))
+    return decode_entities(''.join(soup.body.contents))
+
+
 def to_haml_cdata(self, tabs):
     #TODO
     # handle dynamic content
     # https://github.com/haml/html2haml/blob/01c0bd0a2ee059f6482ef7185860664b0724cf23/lib/html2haml/html.rb#L205
     content = parse_text(self.string, tabs + 1)
+
+    if BeautifulSoup(content).find_all("dynamic"):
+        content = convert_dynamic_to_haml(BeautifulSoup(content), tabs=tabs+1)
+
     return "%s:cdata\n%s" % (tabulate(tabs), content)
 
 def content_without_cdata_tokens(text):
@@ -161,6 +189,11 @@ def to_haml_filter(filter, tabs, **kwargs):
         content = content_without_cdata_tokens(content)
     else:
         content = decode_entities(content)
+
+    soup = BeautifulSoup(content)
+    if soup.body and soup.body.p : soup.body.p.replace_with(content)
+    content = convert_dynamic_to_haml(soup, tabs=tabs+1)
+
     content = re.sub(r'\A\s*\n(\s*)','\g<1>', content)
     original_indent = re.match(r'\A(\s*)', content).group()
 

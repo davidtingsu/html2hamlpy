@@ -20,6 +20,25 @@ class DjangoTest(unittest.TestCase):
 """
         self.assertEqual(haml.rstrip(), render(html))
 
+    def test_django_tag_in_cdata(self):
+        haml = """\
+:cdata
+  - bar
+"""
+        html = """\
+<![CDATA[ {% bar %} ]]>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+        haml = """\
+:cdata
+  - bar
+    <b>foo</b>
+"""
+        html = """\
+<![CDATA[ {% bar %}<b>foo</b>{% endbar %} ]]>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
 
     def test_django_inline_variable_in_script(self):
       haml = """\
@@ -48,7 +67,32 @@ class DjangoTest(unittest.TestCase):
 </script>
 """
       self.assertEqual(haml.rstrip(), render(html))
-    def test_erb_in_style(self):
+
+    def test_django_tag_in_script(self):
+        haml = """\
+:javascript
+  - bar
+"""
+        html = """\
+<script type="text/javascript">
+    {% bar %}
+</script>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+        haml = """\
+:javascript
+  - bar
+    console.log()
+"""
+        html = """\
+<script type="text/javascript">
+  {% bar %}console.log(){% endbar %}
+</script>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+    def test_django_variable_in_style(self):
       haml = """\
 :css
   foo {
@@ -74,6 +118,30 @@ class DjangoTest(unittest.TestCase):
 </style>
 """
       self.assertEqual(haml.rstrip(), render(html))
+
+    def test_django_tag_in_style(self):
+        haml = """\
+:css
+  - bar
+"""
+        html = """\
+<style type="text/css">
+    {% bar %}
+</style>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
+        haml = """\
+:css
+  - comment
+    margin: 0 auto;
+"""
+        html = """\
+<style type="text/css">
+  {% comment %} margin: 0 auto; {% endcomment %}
+</style>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
 
     def test_closed_tags(self):
         html = """\
