@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 setup(
     name = "html2hamlpy",
     version = "0.11.3",
-    packages = find_packages(exclude=["*.tests", "*.tests.*"]),
+    packages = ["html2hamlpy"],
 
     # Project uses beautifulsoup4, so ensure that the docutils get
     # installed or upgraded on the target machine
