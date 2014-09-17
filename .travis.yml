@@ -9,6 +9,6 @@ install:
     - pip install -r requirements.txt
     - pip install coveralls
 # command to run tests
-script: nosetests  --with-coverage --cover-package=lib.html2hamlpy
+script: nosetests  html2hamlpy --with-coverage --cover-package=html2hamlpy
 after_success:
   coveralls

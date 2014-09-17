@@ -33,7 +33,7 @@ $ pyenv activate my-virtual-env-2.7.8
 
 Make sure the tests pass:
 
-    nosetests
+    nosetests html2hamlpy
 To run a individual file run:
 
 ```
@@ -47,7 +47,7 @@ from nose.tools import set_trace; set_trace()
 ```
 
 Then run nosetests with the `-s` option to allow stdout output and `--pdb` to enter the debugger on failures or errors.
-```nosetests tests/test_django.py --pdb -s```
+```nosetests html2hamlpy/tests/test_django.py --pdb -s```
 
 #### References:
 http://stackoverflow.com/a/7493906/1123985
@@ -57,7 +57,7 @@ http://nose.readthedocs.org/en/latest/usage.html
 ### Code coverage
   ```
 $ pip install coverage
-$ nosetests  --with-coverage --cover-package=lib.html2hamlpy --cover-html
+$ nosetests html2hamlpy  --with-coverage --cover-package=html2hamlpy --cover-html
 $ open cover/index.html
  ```
 
