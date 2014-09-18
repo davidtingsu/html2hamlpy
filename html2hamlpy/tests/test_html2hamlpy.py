@@ -188,6 +188,23 @@ Bar -->
 </style>
 """
         self.assertEqual(haml.rstrip(), render(html))
+
+    def style_filter_with_no_type(self):
+        haml = """\
+:css
+  foo {
+      badly: indented;
+  }
+"""
+        html="""\
+<style>
+  foo {
+    badly: indented;
+}
+</style>
+"""
+        self.assertEqual(haml.rstrip(), render(html))
+
     def test_inline_conditional_comment(self):
         haml = """\
 /[if foo] bar baz
@@ -248,6 +265,40 @@ Bar -->
 </script>
 """
         self.assertEqual(haml.rstrip(), render(html))
+
+    def test_rel_tag_parses_as_list(self):
+         haml = """\
+%link{href:"//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css", type:"text/css", rel:"stylesheet"}
+"""
+         html = """\
+   <link href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css" type="text/css" rel="stylesheet">
+ """
+         self.assertEqual(haml.rstrip(), render(html))
+
+    def test_no_type_tag_in_javascript(self):
+        haml = """\
+:javascript
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+"""
+        html = """\
+<script>
+(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+</script>
+ """
+        self.assertEqual(haml.rstrip(), render(html))
+
 
 if __name__ == '__main__':
     unittest.main()

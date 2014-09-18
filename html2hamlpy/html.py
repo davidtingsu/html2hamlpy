@@ -46,12 +46,12 @@ def to_haml_tag(self, tabs, **kwargs):
     kwargs['instance'] = self
 
     if (self.name == "style" and
-        (self.attrs['type'] is None or self.attrs['type'] == "text/css") and
+        self.attrs.get('type') in (None, "text/css") and
         len(set(self.attrs.keys()) - set(['type'])) == 0):
             return to_haml_filter('css', tabs, **kwargs)
 
     if (self.name == "script" and
-        (self.attrs['type'] is None or self.attrs['type'] == "text/javascript") and
+        self.attrs.get('type') in (None, "text/javascript") and
         len(set(self.attrs.keys()) - set(['type'])) == 0):
             return to_haml_filter('javascript', tabs, **kwargs)
     if (self.name == "dynamic"):
@@ -224,7 +224,12 @@ def to_haml_filter(filter, tabs, **kwargs):
 def haml_attributes(**kwargs):
     instance = kwargs['instance']
     if instance.is_dynamic: return ''
-    attrs = map(lambda kv_pair : haml_attribute_pair(kv_pair[0], kv_pair[1]), instance.attrs.items())
+    attrs = map(
+        lambda kv_pair: haml_attribute_pair(
+            kv_pair[0], (' '.join(kv_pair[1]) if isinstance(kv_pair[1], list) else kv_pair[1])
+        ),
+        instance.attrs.items()
+    )
     return "{%s}" % ', '.join(attrs)
 
 def haml_attribute_pair(name, value, **kwargs):
