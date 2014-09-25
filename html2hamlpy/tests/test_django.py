@@ -1,6 +1,34 @@
 from  .test_helper import unittest, render
 import re
 class DjangoTest(unittest.TestCase):
+    def test_self_closed_django_in_attributes(self):
+      html = """\
+<link href="{% static "favicon.ico" %}" rel="shortcut icon"/>
+"""
+      haml = """\
+%link{href:"{% static "favicon.ico" %}", rel:"shortcut icon"}/
+"""
+      self.assertEqual(haml.rstrip(), render(html))
+
+    def test_closed_django_attributes(self):
+      html = """\
+<link href="{% foo "favicon.ico" %}{% endfoo %}" rel="shortcut icon"/>
+"""
+      haml = """\
+%link{href:"{% foo "favicon.ico" %}{% endfoo %}", rel:"shortcut icon"}/
+"""
+      self.assertEqual(haml.rstrip(), render(html))
+
+    def test_nested_django_attribute(self):
+      html = """\
+<link href="{% foo "favicon.ico" %}1{% bar %}2{% baz %}{% endbaz %}3{% endbar %}4{% endfoo %}" rel="shortcut icon"/>
+"""
+      haml = """\
+%link{href:"{% foo "favicon.ico" %}1{% bar %}2{% baz %}{% endbaz %}3{% endbar %}4{% endfoo %}", rel:"shortcut icon"}/
+"""
+      self.assertEqual(haml.rstrip(), render(html))
+
+
     def test_django_variable_in_cdata(self):
         haml = """\
 :cdata

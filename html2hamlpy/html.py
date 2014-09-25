@@ -11,24 +11,43 @@ except ImportError:
 CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<opentagcontent>(?P<tag>[^\s%}]+)[^%}]*)\s+%}\n{0,1}(?P<content>.*?){%[^%}]*?end(?P=tag).*?%}(?P<rightspace>\n*)', re.DOTALL)
 VARIABLE_REGEX = re.compile(r'(?P<leftspace>\s*){{\s*(?P<content>[^\{\}]+?)\s*}}(?P<rightspace>\s*)', re.DOTALL)
 SELF_CLOSED_TAG_REGEX = re.compile(r'(?P<leftspace>\s*){%\s*(?P<content>(?P<tag>[^\s]+)[^%}]*)\s+%}\n{0,1}(?![^%}]*{%.*?end(?P=tag).*?%}\n*)', re.DOTALL)
+ATTRFIND = re.compile(r'(?P<everything>(?P<tag>[^\s]+)(?P<rest>\s*=\s*(?P<quote>[\"|\'])(?P<content>[^=]*))(?P=quote))', re.DOTALL)
 
 def closed_tag_to_dynamic(matchobj):
     leftspace = matchobj.group('leftspace')
     content = matchobj.group('content')
     rightspace = matchobj.group('rightspace')
     opentagcontent = matchobj.group('opentagcontent')
-    return "%s<dynamic dynamic=\"%s\">%s</dynamic>%s" % (leftspace, opentagcontent, content, rightspace)
+    return "%s<dynamic selfclosing=\"false\" dynamic=\"%s\">%s</dynamic>%s" % (leftspace, opentagcontent, content, rightspace)
 
 def self_closed_tag_to_dynamic(matchobj):
     leftspace = matchobj.group('leftspace')
     content = matchobj.group('content')
 
-    return "%s<dynamic dynamic=\"%s\"/>" % (leftspace, content)
+    return "%s<dynamic selfclosing=\"true\" dynamic=\"%s\"/>" % (leftspace, content)
+
+def dynamic_attribute_to_escaped(matchobj, force_escape = False):
+    attrname, attrvalue, everything = matchobj.group('tag', 'content', 'everything')
+    if (len(CLOSED_TAG_REGEX.findall(attrvalue)) > 0 or
+        len(SELF_CLOSED_TAG_REGEX.findall(attrvalue)) > 0 ):
+        while(len(CLOSED_TAG_REGEX.findall(attrvalue)) > 0):
+                 attrvalue = re.sub(CLOSED_TAG_REGEX, closed_tag_to_dynamic, attrvalue)
+        attrvalue = re.sub(SELF_CLOSED_TAG_REGEX, self_closed_tag_to_dynamic, attrvalue)
+        return "%s=\"%s\"" % (attrname, cgi.escape(attrvalue, quote=True))
+    elif force_escape:
+        return "%s=\"%s\"" % (attrname, cgi.escape(attrvalue, quote=True))
+    else:
+        return everything
+
+def dynamic_attribute_to_escaped_generator(force_escape = False, **kwargs):
+    return lambda matchobj, force_escape=force_escape: dynamic_attribute_to_escaped(matchobj, force_escape, **kwargs)
 
 class Converter:
     def __init__(self, *args, **kwargs):
 
         text = args[0]
+        text = re.sub(ATTRFIND, dynamic_attribute_to_escaped, text)
+
         while(len(CLOSED_TAG_REGEX.findall(text)) > 0):
             text = re.sub(CLOSED_TAG_REGEX, closed_tag_to_dynamic, text)
         text = re.sub(SELF_CLOSED_TAG_REGEX, self_closed_tag_to_dynamic, text)
@@ -233,10 +252,32 @@ def haml_attributes(**kwargs):
     return "{%s}" % ', '.join(attrs)
 
 def haml_attribute_pair(name, value, **kwargs):
+    value = re.sub(ATTRFIND, dynamic_attribute_to_escaped_generator(force_escape=True), value)
+    soup = BeautifulSoup(value)
+    if len(soup.find_all("dynamic")) > 0:
+        return "%s:\"%s\"" % (
+            name,
+            parse_text(
+                ''.join([c.restore() for c in soup.contents]),
+                tabs=0,
+                keep_django=True).strip()
+        )
     return "%s:\"%s\"" % (name, parse_text(value, tabs=0).rstrip())
 
 def tabulate(tabs):
     return '  ' * tabs
+
+def restore(self):
+    if isinstance(self, Tag) and self.is_dynamic:
+        if self.is_dynamic_selfclosing:
+            return "{%% %s %%}" % decode_entities(self.attrs.get('dynamic'))
+        else:
+            dynamic = self.attrs.get('dynamic')
+            tag = dynamic.split(' ')[0]
+            content = ''.join([child.restore() for child in (self.children or [])])
+            return "{%% %s %%}%s{%% end%s %%}" % (dynamic, content, tag)
+    else:
+        return str(self)
 
 def variable_object_to_haml(matchobj, inline=False, **kwargs):
     rightspace = matchobj.group('rightspace')
@@ -259,6 +300,7 @@ def translate_text_to_variable_haml(text, **kwargs):
     return text
 
 def parse_text(text, tabs, **kwargs):
+    keep_django = kwargs.pop('keep_django', False)
     text = text.strip()
     if not text : return ""
     lines = []
@@ -270,7 +312,7 @@ def parse_text(text, tabs, **kwargs):
     text = ''.join(lines)
 
     match = CLOSED_TAG_REGEX.match(text)
-    if match :
+    if match and not keep_django:
         tag = match.group('tag')
         content = match.group('content')
         text = "- %s\n%s\n" %(tag, content)
@@ -283,10 +325,16 @@ def decode_entities(text):
 @property
 def is_dynamic(self):
     return self.name == "dynamic"
+@property
+def is_dynamic_self_closing(self):
+    return self.attrs.get('selfclosing') == "true"
 
 setattr(BeautifulSoup, 'to_haml', to_haml_soup)
 setattr(Tag, 'to_haml', to_haml_tag)
 setattr(Tag, 'is_dynamic', is_dynamic)
+setattr(Tag, 'restore', restore)
+setattr(NavigableString, 'restore', restore)
+setattr(Tag, 'is_dynamic_selfclosing', is_dynamic_self_closing)
 setattr(CData, 'to_haml', to_haml_cdata)
 setattr(Comment, 'to_haml', to_haml_comment)
 setattr(NavigableString, 'to_haml', to_haml_navigable_string)
