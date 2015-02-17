@@ -6,8 +6,8 @@
 
 
 html2hamlpy
-=======
-Converts HTML to [HamlPy](https://github.com/jessemiller/HamlPy)
+===========
+Converts (django) HTML to [HamlPy](https://github.com/jessemiller/HamlPy)
 
 
 Installation
