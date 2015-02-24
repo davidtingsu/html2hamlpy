@@ -20,7 +20,7 @@ Usage
 =====
 
 ```python
-from html2hamlpy.html import Converer
+from html2hamlpy.html import Converter
 
 Converter('some django template code', 'html.parser').to_haml()
 ```
